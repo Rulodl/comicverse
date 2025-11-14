@@ -96,5 +96,3 @@ PRIMARY KEY (id_pedido, id_comic);
 
 
 
-
-
