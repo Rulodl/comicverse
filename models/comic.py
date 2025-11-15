@@ -4,10 +4,6 @@ import re
 
 
 class Comic(BaseModel):
-    id_comic: Optional[int] = Field(
-        default=None,
-        description="ID autoincrementable del cómic"
-    )
 
     num_comic: Optional[int] = Field(
         default=None,
@@ -40,4 +36,10 @@ class Comic(BaseModel):
         description="Fecha de publicación en formato YYYY-MM-DD",
         pattern=r"^\d{4}-\d{2}-\d{2}$",
         examples=["2022-05-10"]
+    )
+
+    inventario: Optional[int] = Field(
+        default=0
+        ,description="Cantidad de ejemplares en inventario",
+        examples=[0, 5, 10] 
     )

@@ -75,24 +75,50 @@ ALTER TABLE comicverse.comics_pedidos
 ADD CONSTRAINT PK_comics_pedidos
 PRIMARY KEY (id_pedido, id_comic);
 
+ALTER TABLE comicverse.comic
+ADD inventario INT NOT NULL DEFAULT 0;
 
 
+ALTER TABLE comicverse.comics_pedidos
+ALTER COLUMN cantidad_comics INT NOT NULL;
 
+ALTER TABLE comicverse.comics_pedidos
+ADD CONSTRAINT CK_cantidad_comics CHECK (cantidad_comics > 0);
 
+ALTER TABLE comicverse.comics_pedidos
+ADD CONSTRAINT DF_estado DEFAULT 'Pendiente' FOR estado;
 
+CREATE TRIGGER trg_check_inventario
+ON comicverse.comics_pedidos
+INSTEAD OF INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
 
+    -- Validar inventario suficiente
+    IF EXISTS (
+        SELECT 1
+        FROM inserted i
+        INNER JOIN comicverse.comic c
+            ON i.id_comic = c.id_comic
+        WHERE i.cantidad_comics > c.inventario
+    )
+    BEGIN
+        RAISERROR('Inventario insuficiente para este comic', 16, 1);
+        ROLLBACK TRANSACTION;
+        RETURN;
+    END
 
+    -- Insertar detalle del pedido
+    INSERT INTO comicverse.comics_pedidos (id_pedido, id_comic, cantidad_comics, estado)
+    SELECT id_pedido, id_comic, cantidad_comics, estado
+    FROM inserted;
 
-
-
-
-
-
-
-
-
-
-
-
-
+    -- Actualizar inventario
+    UPDATE c
+    SET c.inventario = c.inventario - i.cantidad_comics
+    FROM comicverse.comic c
+    INNER JOIN inserted i
+        ON c.id_comic = i.id_comic;
+END;
 

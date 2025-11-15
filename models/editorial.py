@@ -3,11 +3,7 @@ from typing import Optional
 import re
 
 class Editorial(BaseModel):
-    id_editorial: Optional[int] = Field(
-        default=None,
-        description="ID autoincrementable de la editorial"
-    )
-
+    
     nombre: Optional[str] = Field(
         default=None,
         description="Nombre de la editorial",
@@ -28,3 +24,5 @@ class Editorial(BaseModel):
         pattern=r"^https?:\/\/[\w\-\.]+\.\w{2,}(\/.*)?$",
         examples=["https://www.marvel.com", "https://www.dc.com"]
     )
+
+    
