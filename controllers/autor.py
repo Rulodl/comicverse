@@ -21,7 +21,6 @@ async def update_autor(id_autor: int, autor: AutorUpdate):
     if not dict_autor:
         raise HTTPException(status_code=400, detail="No se enviaron campos para actualizar")
 
-    # Construimos dinámicamente el UPDATE
     keys = [k for k in dict_autor.keys()]
     variables = " = ?, ".join(keys) + " = ?"
 
@@ -39,7 +38,6 @@ async def update_autor(id_autor: int, autor: AutorUpdate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar autor: {str(e)}")
 
-    # Consultamos el autor actualizado
     sqlfind = """
         SELECT [id_autor], [nombre], [apellido], [email]
         FROM comicverse.autor
@@ -81,7 +79,7 @@ async def get_autor(id_autor: int):
         raise HTTPException(status_code=500, detail=f"Error al consultar autor: {str(e)}")
 
 async def delete_autor(id_autor: int):
-    # 1. Verificar si el autor existe
+
     sql_check = "SELECT id_autor FROM comicverse.autor WHERE id_autor = ?;"
     result = await execute_query_json(sql_check, [id_autor])
     autor = json.loads(result) if isinstance(result, str) else result
@@ -89,7 +87,6 @@ async def delete_autor(id_autor: int):
     if not autor:
         raise HTTPException(status_code=404, detail="Autor no encontrado")
 
-    # 2. Verificar si está asociado a cómics
     sql_check_comics = "SELECT COUNT(*) AS total FROM comicverse.comic WHERE id_autor = ?;"
     result_comics = await execute_query_json(sql_check_comics, [id_autor])
     comics = json.loads(result_comics) if isinstance(result_comics, str) else result_comics
@@ -99,14 +96,10 @@ async def delete_autor(id_autor: int):
             status_code=409,
             detail="No se puede eliminar el autor porque está asociado a cómics"
         )
-
-    # 3. Eliminar autor
     sql_delete = "DELETE FROM comicverse.autor WHERE id_autor = ?;"
-    try:
-        await execute_query_json(sql_delete, [id_autor], needs_commit=True)
-        return {"message": f"Autor con id {id_autor} eliminado correctamente"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al eliminar autor: {str(e)}")
+    await execute_query_json(sql_delete, [id_autor], needs_commit=True)
+
+    return {"message": f"Autor {id_autor} eliminado correctamente"}
 
 async def create_autor(autor: AutorCreate):
     sql_insert = """

@@ -5,14 +5,8 @@ from routes.cliente import router as router_clientes
 from routes.autor import router as router_autores
 from routes.comic import router as router_comics    
 from dotenv import load_dotenv
-import os
 from fastapi import FastAPI
-from identacion import IndentedJSONResponse
 
-app = FastAPI(default_response_class=IndentedJSONResponse)
-
-
-# Cargar variables de entorno desde .env
 load_dotenv()
 
 app = FastAPI(
@@ -21,7 +15,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Registrar routers
 app.include_router(router_editoriales)
 app.include_router(router_pedidos)
 app.include_router(router_clientes)

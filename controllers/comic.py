@@ -57,7 +57,7 @@ async def create_comic(comic: Comic):
         raise HTTPException(status_code=500, detail=f"Error al consultar cómic: {str(e)}")
 
 async def update_comic(id_comic: int, comic: ComicUpdate):
-    # 1. Obtener inventario actual
+
     sql_get = "SELECT inventario FROM comicverse.comic WHERE id_comic = ?;"
     try:
         result = await execute_query_json(sql_get, [id_comic])
@@ -70,10 +70,10 @@ async def update_comic(id_comic: int, comic: ComicUpdate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar inventario: {str(e)}")
 
-    # 2. Calcular nuevo inventario
+
     nuevo_inventario = inventario_actual + (comic.inventario or 0)
 
-    # 3. Construir dinámicamente el UPDATE
+
     dict_comic = comic.model_dump(exclude_none=True)
     if "inventario" in dict_comic:
         dict_comic["inventario"] = nuevo_inventario
@@ -95,7 +95,6 @@ async def update_comic(id_comic: int, comic: ComicUpdate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar comic: {str(e)}")
 
-    # 4. Consultar comic actualizado
     sqlfind = """
         SELECT [id_comic], [num_comic], [titulo], [id_editorial], [id_autor], [fecha_publicacion], [inventario]
         FROM comicverse.comic
@@ -113,7 +112,7 @@ async def update_comic(id_comic: int, comic: ComicUpdate):
         raise HTTPException(status_code=500, detail=f"Error al consultar comic: {str(e)}")
     
 async def delete_comic(id_comic: int):
-    # 1. Verificar si el cómic existe
+
     sql_check = "SELECT id_comic FROM comicverse.comic WHERE id_comic = ?;"
     result = await execute_query_json(sql_check, [id_comic])
     comic = json.loads(result) if isinstance(result, str) else result
@@ -121,7 +120,7 @@ async def delete_comic(id_comic: int):
     if not comic:
         raise HTTPException(status_code=404, detail="Cómic no encontrado")
 
-    # 2. Verificar si está asociado a pedidos
+
     sql_check_pedidos = """
         SELECT COUNT(*) AS total
         FROM comicverse.comics_pedidos
@@ -136,7 +135,6 @@ async def delete_comic(id_comic: int):
             detail="No se puede eliminar el cómic porque está asociado a pedidos"
         )
 
-    # 3. Eliminar el cómic
     sql_delete = "DELETE FROM comicverse.comic WHERE id_comic = ?;"
     try:
         await execute_query_json(sql_delete, [id_comic], needs_commit=True)

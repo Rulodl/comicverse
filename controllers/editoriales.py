@@ -4,11 +4,8 @@ from utils.database import execute_query_json
 from models.editorial import Editorial, EditorialUpdate
 from fastapi import HTTPException
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 async def create_editorial(editorial: Editorial) -> dict:
-    # 1. Insertar nueva editorial
+
     sql_insert = """
         INSERT INTO comicverse.editorial (nombre, fecha_fundacion, sitio_web)
         VALUES (?, ?, ?);
@@ -24,7 +21,7 @@ async def create_editorial(editorial: Editorial) -> dict:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al insertar editorial: {str(e)}")
 
-    # 2. Consultar editorial recién insertada por nombre
+
     sql_select = """
         SELECT id_editorial, nombre, fecha_fundacion, sitio_web
         FROM comicverse.editorial
@@ -59,31 +56,35 @@ async def get_all_editoriales() -> list[Editorial]:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Database error: { str(e) }")
     
-async def get_one_editorial(id_editorial: int):
-    sql_select = """
-        SELECT e.id_editorial,
-            e.nombre,
-            e.fecha_fundacion,
-            e.sitio_web,
-            COUNT(c.id_comic) AS total_comics
-        FROM comicverse.editorial e
-        LEFT JOIN comicverse.comic c
-            ON e.id_editorial = c.id_editorial
-        WHERE e.id_editorial = ?
-        GROUP BY e.id_editorial, e.nombre, e.fecha_fundacion, e.sitio_web;
+async def get_editorial(id_editorial: int):
+
+    sql_editorial = """
+        SELECT id_editorial, nombre, fecha_fundacion, sitio_web
+        FROM comicverse.editorial
+        WHERE id_editorial = ?;
     """
-    params = [id_editorial]
+    result = await execute_query_json(sql_editorial, [id_editorial])
+    editorial = json.loads(result) if isinstance(result, str) else result
 
-    try:
-        result = await execute_query_json(sql_select, params=params)
-        result_dict = json.loads(result) if isinstance(result, str) else result
+    if not editorial:
+        raise HTTPException(status_code=404, detail="Editorial no encontrada")
 
-        if len(result_dict) > 0:
-            return result_dict[0]
-        else:
-            raise HTTPException(status_code=404, detail="Editorial not found")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    sql_count_comics = """
+        SELECT COUNT(*) AS cantidad_comics
+        FROM comicverse.comic
+        WHERE id_editorial = ?;
+    """
+    result_comics = await execute_query_json(sql_count_comics, [id_editorial])
+    comics = json.loads(result_comics) if isinstance(result_comics, str) else result_comics
+    cantidad = comics[0]["cantidad_comics"]
+
+    return {
+        "id_editorial": editorial[0]["id_editorial"],
+        "nombre": editorial[0]["nombre"],
+        "fecha_fundacion": editorial[0]["fecha_fundacion"],
+        "sitio_web": editorial[0]["sitio_web"],
+        "cantidad_comics": cantidad
+    }
 
 async def update_editorial(id_editorial: int, editorial: EditorialUpdate):
     dict_editorial = editorial.model_dump(exclude_none=True)
@@ -91,7 +92,6 @@ async def update_editorial(id_editorial: int, editorial: EditorialUpdate):
     if not dict_editorial:
         raise HTTPException(status_code=400, detail="No se enviaron campos para actualizar")
 
-    # Construimos dinámicamente el UPDATE
     keys = [k for k in dict_editorial.keys()]
     variables = " = ?, ".join(keys) + " = ?"
 
@@ -109,7 +109,6 @@ async def update_editorial(id_editorial: int, editorial: EditorialUpdate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar editorial: {str(e)}")
 
-    # Consultamos la editorial actualizada
     sqlfind = """
         SELECT [id_editorial], [nombre], [fecha_fundacion], [sitio_web]
         FROM comicverse.editorial
@@ -127,7 +126,7 @@ async def update_editorial(id_editorial: int, editorial: EditorialUpdate):
         raise HTTPException(status_code=500, detail=f"Error al consultar editorial: {str(e)}")
 
 async def delete_editorial(id_editorial: int):
-    # 1. Verificar si la editorial existe
+
     sql_check = "SELECT id_editorial FROM comicverse.editorial WHERE id_editorial = ?;"
     result = await execute_query_json(sql_check, [id_editorial])
     editorial = json.loads(result) if isinstance(result, str) else result
@@ -135,7 +134,7 @@ async def delete_editorial(id_editorial: int):
     if not editorial:
         raise HTTPException(status_code=404, detail="Editorial no encontrada")
 
-    # 2. Verificar si tiene cómics asociados
+
     sql_check_comics = "SELECT COUNT(*) AS total FROM comicverse.comic WHERE id_editorial = ?;"
     result_comics = await execute_query_json(sql_check_comics, [id_editorial])
     comics = json.loads(result_comics) if isinstance(result_comics, str) else result_comics
@@ -146,46 +145,14 @@ async def delete_editorial(id_editorial: int):
             detail="No se puede eliminar la editorial porque tiene cómics asociados"
         )
 
-    # 3. Eliminar la editorial
+
     sql_delete = "DELETE FROM comicverse.editorial WHERE id_editorial = ?;"
     await execute_query_json(sql_delete, [id_editorial], needs_commit=True)
 
     return {"message": f"Editorial {id_editorial} eliminada correctamente"}
 
-async def get_editorial(id_editorial: int):
-    # 1. Obtener datos de la editorial
-    sql_editorial = """
-        SELECT id_editorial, nombre, fecha_fundacion, sitio_web
-        FROM comicverse.editorial
-        WHERE id_editorial = ?;
-    """
-    result = await execute_query_json(sql_editorial, [id_editorial])
-    editorial = json.loads(result) if isinstance(result, str) else result
-
-    if not editorial:
-        raise HTTPException(status_code=404, detail="Editorial no encontrada")
-
-    # 2. Contar cómics asociados
-    sql_count_comics = """
-        SELECT COUNT(*) AS cantidad_comics
-        FROM comicverse.comic
-        WHERE id_editorial = ?;
-    """
-    result_comics = await execute_query_json(sql_count_comics, [id_editorial])
-    comics = json.loads(result_comics) if isinstance(result_comics, str) else result_comics
-    cantidad = comics[0]["cantidad_comics"]
-
-    # 3. Armar respuesta
-    return {
-        "id_editorial": editorial[0]["id_editorial"],
-        "nombre": editorial[0]["nombre"],
-        "fecha_fundacion": editorial[0]["fecha_fundacion"],
-        "sitio_web": editorial[0]["sitio_web"],
-        "cantidad_comics": cantidad
-    }
-
 async def get_editorial_comics(id_editorial: int):
-    # 1. Verificar si la editorial existe
+
     sql_check = """
         SELECT id_editorial, nombre
         FROM comicverse.editorial
@@ -197,7 +164,6 @@ async def get_editorial_comics(id_editorial: int):
     if not editorial:
         raise HTTPException(status_code=404, detail="Editorial no encontrada")
 
-    # 2. Obtener cómics asociados (sin inventario)
     sql_comics = """
         SELECT 
             c.id_comic,
@@ -210,7 +176,6 @@ async def get_editorial_comics(id_editorial: int):
     result_comics = await execute_query_json(sql_comics, [id_editorial])
     comics = json.loads(result_comics) if isinstance(result_comics, str) else result_comics
 
-    # 3. Armar respuesta
     return {
         "id_editorial": editorial[0]["id_editorial"],
         "nombre_editorial": editorial[0]["nombre"],
@@ -219,7 +184,7 @@ async def get_editorial_comics(id_editorial: int):
     }
 
 async def get_editorial_comic(id_editorial: int, id_comic: int):
-    # 1. Verificar si la editorial existe
+
     sql_check_editorial = """
         SELECT id_editorial, nombre
         FROM comicverse.editorial
@@ -231,7 +196,6 @@ async def get_editorial_comic(id_editorial: int, id_comic: int):
     if not editorial:
         raise HTTPException(status_code=404, detail="Editorial no encontrada")
 
-    # 2. Obtener cómic con join al autor
     sql_comic = """
         SELECT 
             c.id_comic,
@@ -255,7 +219,6 @@ async def get_editorial_comic(id_editorial: int, id_comic: int):
     if not comic:
         raise HTTPException(status_code=404, detail="Cómic no encontrado en esta editorial")
 
-    # 3. Devolver directamente el cómic con datos de editorial y autor
     return comic[0]
 
 

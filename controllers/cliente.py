@@ -2,13 +2,8 @@ from fastapi import HTTPException
 import json
 from utils.database import execute_query_json
 from models.cliente import Cliente, ClienteUpdate
-import logging
+
 from datetime import datetime
-
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 
 async def get_all_clientes() -> list[Cliente]:
     selectscript = """
@@ -45,17 +40,18 @@ async def get_cliente(id_cliente: int):
         raise HTTPException(status_code=500, detail=f"Error al consultar cliente: {str(e)}")
 
 async def create_cliente(cliente: Cliente):
-    # 1. Insertar cliente con fecha_creacion automática
+
     sql_insert = """
         INSERT INTO comicverse.cliente (nombre, apellido, email, fecha_creacion)
         OUTPUT INSERTED.id_cliente
-        VALUES (?, ?, ?, GETDATE());
+        VALUES (?, ?, ?, ?);
     """
     params = [
         cliente.nombre,
         cliente.apellido,
-        cliente.email
-    ]
+        cliente.email,
+        datetime.now()
+                    ]
 
     try:
         result = await execute_query_json(sql_insert, params, needs_commit=True)
@@ -64,7 +60,6 @@ async def create_cliente(cliente: Cliente):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al insertar cliente: {str(e)}")
 
-    # 2. Consultar cliente recién creado
     sql_select = """
         SELECT [id_cliente], [nombre], [apellido], [email], [fecha_creacion]
         FROM comicverse.cliente
@@ -78,23 +73,25 @@ async def create_cliente(cliente: Cliente):
         raise HTTPException(status_code=500, detail=f"Error al consultar cliente: {str(e)}")
 
 async def delete_cliente(id_cliente: int):
-    # Verificamos si existe
+
     sql_check = "SELECT id_cliente FROM comicverse.cliente WHERE id_cliente = ?;"
     result = await execute_query_json(sql_check, [id_cliente])
-    result_dict = json.loads(result) if isinstance(result, str) else result
-    # Eliminamos
+    cliente = json.loads(result) if isinstance(result, str) else result
+
+    if not cliente:
+        raise HTTPException(status_code=404, detail="Cliente no encontrado")
+
     sql_delete = "DELETE FROM comicverse.cliente WHERE id_cliente = ?;"
     try:
         await execute_query_json(sql_delete, [id_cliente], needs_commit=True)
         return {"message": f"Cliente con id {id_cliente} eliminado correctamente"}
     except Exception as e:
-        raise HTTPException(status_code=404, detail=f"Cliente no encontradoe: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error al eliminar cliente: {str(e)}")
 
 async def update_cliente(id_cliente: int, cliente: ClienteUpdate) -> dict:
-    # Convertir el modelo a dict, excluyendo valores None
+
     dict_cliente = cliente.model_dump(exclude_none=True)
 
-    # Construir dinámicamente el SET
     keys = [k for k in dict_cliente.keys()]
     variables = " = ?, ".join(keys) + " = ?"
 
@@ -112,7 +109,6 @@ async def update_cliente(id_cliente: int, cliente: ClienteUpdate) -> dict:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al actualizar cliente: {str(e)}")
 
-    # Consultar cliente actualizado
     sqlfind = """
         SELECT id_cliente, nombre, apellido, email, fecha_creacion
         FROM comicverse.cliente

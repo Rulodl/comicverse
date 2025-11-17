@@ -74,7 +74,6 @@ async def create_pedido(pedido):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar pedido: {str(e)}")
 
-
 async def get_all_pedidos():
     selectscript = """
         SELECT p.[id_pedido],
@@ -141,14 +140,12 @@ async def get_pedido(id_pedido: int):
         return pedido_info
 
     except HTTPException:
-        # deja pasar los HTTPException (como el 404)
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error inesperado al consultar pedido: {str(e)}")
 
-
 async def update_pedido_estado(id_pedido: int, pedido: PedidoEstadoUpdate):
-    # 1) Actualiza fecha_entrega si viene en el body
+
     if pedido.fecha_entrega is not None:
         fecha_str = (
             pedido.fecha_entrega.isoformat()
@@ -162,7 +159,7 @@ async def update_pedido_estado(id_pedido: int, pedido: PedidoEstadoUpdate):
         """
         await execute_query_json(sql_update_pedido, [fecha_str, id_pedido], needs_commit=True)
 
-    # 2) Modifica estado de cómics ya existentes
+
     if pedido.comics:
         for item in pedido.comics:
             sql_check = """
@@ -188,11 +185,11 @@ async def update_pedido_estado(id_pedido: int, pedido: PedidoEstadoUpdate):
             """
             await execute_query_json(sql_update_line, [nuevo_estado, id_pedido, item.id_comic], needs_commit=True)
 
-    # 3) Devuelve el pedido actualizado
+
     return await get_pedido(id_pedido)
 
 async def replace_comic_in_pedido(id_pedido: int, id_comic: int, data: ComicReplace):
-    # 1. Obtener cantidad actual del cómic original
+
     sql_get_cantidad = """
         SELECT cantidad_comics
         FROM comicverse.comics_pedidos
@@ -202,7 +199,7 @@ async def replace_comic_in_pedido(id_pedido: int, id_comic: int, data: ComicRepl
     result_dict = json.loads(result) if isinstance(result, str) else result
     cantidad_original = result_dict[0]["cantidad_comics"] if result_dict else 0
 
-    # 2. Devolver inventario al cómic original
+
     sql_sumar_inventario = """
         UPDATE comicverse.comic
         SET inventario = inventario + ?
@@ -210,25 +207,23 @@ async def replace_comic_in_pedido(id_pedido: int, id_comic: int, data: ComicRepl
     """
     await execute_query_json(sql_sumar_inventario, [cantidad_original, id_comic], needs_commit=True)
 
-    # 3. Eliminar la línea original
+
     sql_delete = """
         DELETE FROM comicverse.comics_pedidos
         WHERE id_pedido = ? AND id_comic = ?;
     """
     await execute_query_json(sql_delete, [id_pedido, id_comic], needs_commit=True)
 
-    # 4. Insertar la nueva línea (el trigger ya descuenta inventario automáticamente)
     sql_insert = """
         INSERT INTO comicverse.comics_pedidos (id_pedido, id_comic, cantidad_comics, estado)
         VALUES (?, ?, ?, ?);
     """
     await execute_query_json(sql_insert, [id_pedido, data.id_comic_nuevo, data.cantidad_comics, data.estado], needs_commit=True)
 
-    # 5. Consultar pedido actualizado
     return await get_pedido(id_pedido)
 
 async def delete_pedido(id_pedido: int):
-    # 1. Obtener todas las líneas del pedido
+
     sql_get_lineas = """
         SELECT id_comic, cantidad_comics
         FROM comicverse.comics_pedidos
@@ -240,7 +235,6 @@ async def delete_pedido(id_pedido: int):
     if not lineas:
         raise HTTPException(status_code=404, detail="Pedido no encontrado o sin cómics")
 
-    # 2. Devolver inventario de cada cómic (manual, porque el trigger solo actúa en INSERT)
     for linea in lineas:
         sql_update_inventario = """
             UPDATE comicverse.comic
@@ -249,14 +243,12 @@ async def delete_pedido(id_pedido: int):
         """
         await execute_query_json(sql_update_inventario, [linea["cantidad_comics"], linea["id_comic"]], needs_commit=True)
 
-    # 3. Eliminar las líneas del pedido
     sql_delete_lineas = """
         DELETE FROM comicverse.comics_pedidos
         WHERE id_pedido = ?;
     """
     await execute_query_json(sql_delete_lineas, [id_pedido], needs_commit=True)
 
-    # 4. Eliminar el pedido
     sql_delete_pedido = """
         DELETE FROM comicverse.pedido
         WHERE id_pedido = ?;
@@ -264,7 +256,7 @@ async def delete_pedido(id_pedido: int):
     await execute_query_json(sql_delete_pedido, [id_pedido], needs_commit=True)
 
 async def delete_comic_in_pedido(id_pedido: int, id_comic: int):
-    # 1. Obtener cantidad actual del cómic en el pedido
+
     sql_get_cantidad = """
         SELECT cantidad_comics
         FROM comicverse.comics_pedidos
@@ -278,7 +270,7 @@ async def delete_comic_in_pedido(id_pedido: int, id_comic: int):
 
     cantidad = result_dict[0]["cantidad_comics"]
 
-    # 2. Devolver inventario al cómic
+
     sql_update_inventario = """
         UPDATE comicverse.comic
         SET inventario = inventario + ?
@@ -289,7 +281,7 @@ async def delete_comic_in_pedido(id_pedido: int, id_comic: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al devolver inventario: {str(e)}")
 
-    # 3. Eliminar la línea del pedido
+
     sql_delete = """
         DELETE FROM comicverse.comics_pedidos
         WHERE id_pedido = ? AND id_comic = ?;
@@ -299,7 +291,7 @@ async def delete_comic_in_pedido(id_pedido: int, id_comic: int):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al eliminar cómic del pedido: {str(e)}")
 
-    # 4. Consultar pedido actualizado
+
     return await get_pedido(id_pedido)
 
 
