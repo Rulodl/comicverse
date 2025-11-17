@@ -1,13 +1,8 @@
-from pydantic import BaseModel, Field, field_validator
 from typing import Optional
-import re
+from pydantic import BaseModel, EmailStr, Field
 
 
-class Autor(BaseModel):
-    id_autor: Optional[int] = Field(
-        default=None,
-        description="ID autoincrementable del autor"
-    )
+class AutorCreate(BaseModel):
 
     nombre: Optional[str] = Field(
         default=None,
@@ -30,9 +25,7 @@ class Autor(BaseModel):
         examples=["stan.lee@example.com"]
     )
 
-    nacionalidad: Optional[str] = Field(
-        default=None,
-        description="Nacionalidad del autor",
-        pattern=r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ' -]+$",
-        examples=["Estadounidense", "Británico"]
-    )
+class AutorUpdate(BaseModel):
+    nombre: Optional[str] = None
+    apellido: Optional[str] = None
+    email: Optional[EmailStr] = None

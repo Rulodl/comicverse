@@ -88,6 +88,12 @@ ADD CONSTRAINT CK_cantidad_comics CHECK (cantidad_comics > 0);
 ALTER TABLE comicverse.comics_pedidos
 ADD CONSTRAINT DF_estado DEFAULT 'Pendiente' FOR estado;
 
+ALTER TABLE comicverse.pedido
+ALTER COLUMN fecha_pedido DATETIME NULL;
+
+ALTER TABLE comicverse.cliente ADD fecha_creacion DATETIME NULL;
+
+
 CREATE TRIGGER trg_check_inventario
 ON comicverse.comics_pedidos
 INSTEAD OF INSERT

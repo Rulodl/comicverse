@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, HttpUrl
 from typing import Optional
-import re
+from datetime import date
+
 
 class Editorial(BaseModel):
     
@@ -25,4 +26,12 @@ class Editorial(BaseModel):
         examples=["https://www.marvel.com", "https://www.dc.com"]
     )
 
-    
+class EditorialUpdate(BaseModel):
+    nombre: Optional[str] = None
+    fecha_fundacion: Optional[date] = None
+    sitio_web: Optional[str] = Field(
+        default=None,
+        description="Sitio web oficial de la editorial",
+        pattern=r"^https?:\/\/[\w\-\.]+\.\w{2,}(\/.*)?$",
+        examples=["https://www.marvel.com", "https://www.dc.com"]
+    )

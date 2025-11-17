@@ -1,45 +1,23 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from typing import Optional
-import re
-
+from datetime import date
 
 class Comic(BaseModel):
+    num_comic: Optional[int] = None
+    titulo: str  # obligatorio
+    id_editorial: int  # obligatorio
+    id_autor: int  # obligatorio
+    fecha_publicacion: Optional[str] = None
+    inventario: int  # obligatorio
 
-    num_comic: Optional[int] = Field(
-        default=None,
-        description="Número del cómic",
-        examples=[1, 25, 300]
-    )
 
-    titulo: Optional[str] = Field(
-        default=None,
-        description="Título del cómic",
-        min_length=1,
-        max_length=200,
-        examples=["Spider-Man", "Batman", "The Walking Dead"]
-    )
 
-    editorial_id: Optional[int] = Field(
-        default=None,
-        description="FK hacia la tabla editorial (id_editorial)",
-        examples=[1]
-    )
 
-    autor_id: Optional[int] = Field(
-        default=None,
-        description="FK hacia la tabla autor (id_autor)",
-        examples=[1]
-    )
+class ComicUpdate(BaseModel):
+    num_comic: Optional[int] = None
+    titulo: Optional[str] = None
+    id_editorial: Optional[int] = None
+    id_autor: Optional[int] = None
+    fecha_publicacion: Optional[date] = None
+    inventario: Optional[int] = Field(0, ge=0)  # cantidad a sumar
 
-    fecha_publicacion: Optional[str] = Field(
-        default=None,
-        description="Fecha de publicación en formato YYYY-MM-DD",
-        pattern=r"^\d{4}-\d{2}-\d{2}$",
-        examples=["2022-05-10"]
-    )
-
-    inventario: Optional[int] = Field(
-        default=0
-        ,description="Cantidad de ejemplares en inventario",
-        examples=[0, 5, 10] 
-    )

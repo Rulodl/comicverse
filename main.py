@@ -6,6 +6,11 @@ from routes.autor import router as router_autores
 from routes.comic import router as router_comics    
 from dotenv import load_dotenv
 import os
+from fastapi import FastAPI
+from identacion import IndentedJSONResponse
+
+app = FastAPI(default_response_class=IndentedJSONResponse)
+
 
 # Cargar variables de entorno desde .env
 load_dotenv()
@@ -23,6 +28,4 @@ app.include_router(router_clientes)
 app.include_router(router_autores)
 app.include_router(router_comics)
 
-@app.get("/")
-async def root():
-    return {"message": "Bienvenido a Comicverse API"}
+
