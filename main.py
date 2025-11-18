@@ -13,7 +13,7 @@ load_dotenv()
 app = FastAPI(
     title="Comicverse API",
     description="API para gestionar editoriales, cómics, pedidos y clientes",
-    version="1.0.0"
+    version="0.0.3"
 )
 
 app.include_router(router_editoriales)

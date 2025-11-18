@@ -131,6 +131,7 @@ async def get_cliente_pedidos(id_cliente: int):
             p.id_pedido,
             p.fecha_pedido,
             p.fecha_entrega,
+            p.total,
             cp.id_comic,
             c.titulo AS titulo_comic,
             cp.cantidad_comics,

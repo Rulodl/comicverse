@@ -148,6 +148,7 @@ async def get_comic(id_comic: int):
             c.num_comic,
             c.titulo,
             c.fecha_publicacion,
+            c.precio,
             c.inventario,
             e.id_editorial,
             e.nombre AS nombre_editorial,

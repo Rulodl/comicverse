@@ -40,13 +40,14 @@ async def create_pedido(pedido):
 
     #Devolver pedido 
     sql_select = """
-        SELECT p.id_pedido, p.id_cliente, p.fecha_pedido, p.fecha_entrega,
+    SELECT p.id_pedido, p.id_cliente, p.fecha_pedido, p.fecha_entrega, p.total,
             cp.id_comic, c.titulo, cp.cantidad_comics, cp.estado
-        FROM comicverse.pedido p
-        INNER JOIN comicverse.comics_pedidos cp ON p.id_pedido = cp.id_pedido
-        INNER JOIN comicverse.comic c ON cp.id_comic = c.id_comic
-        WHERE p.id_pedido = ?;
-    """
+            FROM comicverse.pedido p
+            INNER JOIN comicverse.comics_pedidos cp ON p.id_pedido = cp.id_pedido
+            INNER JOIN comicverse.comic c ON cp.id_comic = c.id_comic
+            WHERE p.id_pedido = ?;
+"""
+
     try:
         result = await execute_query_json(sql_select, [id_pedido])
         rows = json.loads(result) if isinstance(result, str) else result
@@ -59,6 +60,7 @@ async def create_pedido(pedido):
             "id_cliente": rows[0]["id_cliente"],
             "fecha_pedido": rows[0]["fecha_pedido"],
             "fecha_entrega": rows[0]["fecha_entrega"],
+            "total": rows[0]["total"],   # 👈 nuevo campo
             "comics": [
                 {
                     "id_comic": r["id_comic"],
@@ -70,6 +72,7 @@ async def create_pedido(pedido):
             ]
         }
 
+
         return pedido_info
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error al consultar pedido: {str(e)}")
@@ -80,6 +83,7 @@ async def get_all_pedidos():
             p.[id_cliente],
             p.[fecha_pedido],
             p.[fecha_entrega],
+            p.[total],
             c.[nombre] AS nombre_cliente,
             c.[apellido] AS apellido_cliente
         FROM [comicverse].[pedido] AS p
@@ -100,6 +104,7 @@ async def get_pedido(id_pedido: int):
             p.id_cliente,
             p.fecha_pedido,
             p.fecha_entrega,
+            p.total,
             c.nombre AS nombre_cliente,
             c.apellido AS apellido_cliente,
             cp.id_comic,
@@ -126,6 +131,7 @@ async def get_pedido(id_pedido: int):
             "apellido_cliente": rows[0]["apellido_cliente"],
             "fecha_pedido": rows[0]["fecha_pedido"],
             "fecha_entrega": rows[0]["fecha_entrega"],
+            "total": rows[0]["total"],
             "comics": [
                 {
                     "id_comic": r["id_comic"],
@@ -159,32 +165,20 @@ async def update_pedido_estado(id_pedido: int, pedido: PedidoEstadoUpdate):
         """
         await execute_query_json(sql_update_pedido, [fecha_str, id_pedido], needs_commit=True)
 
-
     if pedido.comics:
         for item in pedido.comics:
-            sql_check = """
-                SELECT estado
-                FROM comicverse.comics_pedidos
-                WHERE id_pedido = ? AND id_comic = ?;
-            """
-            res_line = await execute_query_json(sql_check, [id_pedido, item.id_comic])
-            line = json.loads(res_line) if isinstance(res_line, str) else res_line
-
-            if not line:
-                raise HTTPException(
-                    status_code=404,
-                    detail=f"La línea (id_pedido={id_pedido}, id_comic={item.id_comic}) no existe."
-                )
-
-            nuevo_estado = item.estado if item.estado is not None else line[0]["estado"]
-
+            nuevo_estado = item.estado
             sql_update_line = """
                 UPDATE comicverse.comics_pedidos
                 SET estado = ?
                 WHERE id_pedido = ? AND id_comic = ?;
             """
-            await execute_query_json(sql_update_line, [nuevo_estado, id_pedido, item.id_comic], needs_commit=True)
-
+            res = await execute_query_json(sql_update_line, [nuevo_estado, id_pedido, item.id_comic], needs_commit=True)
+            if not res:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"La línea (id_pedido={id_pedido}, id_comic={item.id_comic}) no existe."
+                )
 
     return await get_pedido(id_pedido)
 
