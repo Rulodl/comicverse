@@ -6,6 +6,7 @@ from routes.autor import router as router_autores
 from routes.comic import router as router_comics    
 from dotenv import load_dotenv
 from fastapi import FastAPI
+import uvicorn
 
 load_dotenv()
 
@@ -21,4 +22,5 @@ app.include_router(router_clientes)
 app.include_router(router_autores)
 app.include_router(router_comics)
 
-
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")   
