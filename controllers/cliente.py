@@ -146,13 +146,13 @@ async def get_cliente_pedidos(id_cliente: int):
         pedidos = json.loads(result) if isinstance(result, str) else result
 
         if not pedidos:
-            raise HTTPException(status_code=404, detail="No se encontraron pedidos para este cliente")
+            raise HTTPException(status_code=404)
 
         return {
             "id_cliente": id_cliente,
             "pedidos": pedidos
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error al consultar pedidos del cliente: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"No se encontraron pedidos para este cliente: {str(e)}")
 
 
